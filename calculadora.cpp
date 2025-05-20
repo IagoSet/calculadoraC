@@ -88,10 +88,10 @@ LRESULT CALLBACK Calculadora::WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LP
 }
 
 void Calculadora::OnCreate(HWND hwnd) {
-    CreateWindowA("STATIC", "Número 1:", WS_VISIBLE | WS_CHILD, 20, 20, 80, 20, hwnd, NULL, hInst, NULL);
+    CreateWindowA("STATIC", "Numero 1:", WS_VISIBLE | WS_CHILD, 20, 20, 80, 20, hwnd, NULL, hInst, NULL);
     hEdit1 = CreateWindowA("EDIT", "", WS_VISIBLE | WS_CHILD | WS_BORDER, 100, 20, 100, 20, hwnd, (HMENU)ID_EDIT1, hInst, NULL);
 
-    CreateWindowA("STATIC", "Número 2:", WS_VISIBLE | WS_CHILD, 20, 50, 80, 20, hwnd, NULL, hInst, NULL);
+    CreateWindowA("STATIC", "Numero 2:", WS_VISIBLE | WS_CHILD, 20, 50, 80, 20, hwnd, NULL, hInst, NULL);
     hEdit2 = CreateWindowA("EDIT", "", WS_VISIBLE | WS_CHILD | WS_BORDER, 100, 50, 100, 20, hwnd, (HMENU)ID_EDIT2, hInst, NULL);
 
     CreateWindowA("BUTTON", "+", WS_VISIBLE | WS_CHILD, 20, 90, 30, 30, hwnd, (HMENU)ID_ADD, hInst, NULL);
