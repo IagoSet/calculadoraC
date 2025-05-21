@@ -1,63 +1,126 @@
 #include <windows.h>
 #include <stdio.h>
 
-#define ID_EDIT1 1
-#define ID_EDIT2 2
-#define ID_RESULT 3
-#define ID_ADD 4
-#define ID_SUB 5
-#define ID_MUL 6
-#define ID_DIV 7
+#define ID_DISPLAY 100
+#define ID_BTN_0 200
+#define ID_BTN_1 201
+#define ID_BTN_2 202
+#define ID_BTN_3 203
+#define ID_BTN_4 204
+#define ID_BTN_5 205   
+#define ID_BTN_6 206
+#define ID_BTN_7 207
+#define ID_BTN_8 208
+#define ID_BTN_9 209
+#define ID_BTN_ADD 210
+#define ID_BTN_SUB 211
+#define ID_BTN_MUL 212
+#define ID_BTN_DIV 213
+#define ID_BTN_EQ  214
+#define ID_BTN_CLR 215
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    static HWND hEdit1, hEdit2, hResult;
+    static HWND hDisplay;
+    static char operando[2][100] = {"", ""};
+    static char operador = 0;
+    static int fase = 0;
+    static int resultadoMostrado = 0;  // Flag para indicar se um resultado está sendo mostrado
 
     switch (uMsg) {
-        case WM_CREATE:
-            CreateWindow("STATIC", "Numero 1:", WS_VISIBLE | WS_CHILD, 20, 20, 80, 20, hwnd, NULL, NULL, NULL);
-            hEdit1 = CreateWindow("EDIT", "", WS_VISIBLE | WS_CHILD | WS_BORDER, 100, 20, 100, 20, hwnd, (HMENU)ID_EDIT1, NULL, NULL);
+        case WM_CREATE: {
+            hDisplay = CreateWindow("EDIT", "", WS_VISIBLE | WS_CHILD | WS_BORDER | ES_RIGHT | ES_READONLY,
+                                    20, 20, 220, 30, hwnd, (HMENU)ID_DISPLAY, NULL, NULL);
 
-            CreateWindow("STATIC", "Numero 2:", WS_VISIBLE | WS_CHILD, 20, 50, 80, 20, hwnd, NULL, NULL, NULL);
-            hEdit2 = CreateWindow("EDIT", "", WS_VISIBLE | WS_CHILD | WS_BORDER, 100, 50, 100, 20, hwnd, (HMENU)ID_EDIT2, NULL, NULL);
+            const char *botoes[4][4] = {
+                {"7", "8", "9", "/"},
+                {"4", "5", "6", "*"},
+                {"1", "2", "3", "-"},
+                {"C", "0", "=", "+"}
+            };
 
-            CreateWindow("BUTTON", "+", WS_VISIBLE | WS_CHILD, 20, 90, 30, 30, hwnd, (HMENU)ID_ADD, NULL, NULL);
-            CreateWindow("BUTTON", "-", WS_VISIBLE | WS_CHILD, 60, 90, 30, 30, hwnd, (HMENU)ID_SUB, NULL, NULL);
-            CreateWindow("BUTTON", "*", WS_VISIBLE | WS_CHILD, 100, 90, 30, 30, hwnd, (HMENU)ID_MUL, NULL, NULL);
-            CreateWindow("BUTTON", "/", WS_VISIBLE | WS_CHILD, 140, 90, 30, 30, hwnd, (HMENU)ID_DIV, NULL, NULL);
+            int idMap[4][4] = {
+                {ID_BTN_7, ID_BTN_8, ID_BTN_9, ID_BTN_DIV},
+                {ID_BTN_4, ID_BTN_5, ID_BTN_6, ID_BTN_MUL},
+                {ID_BTN_1, ID_BTN_2, ID_BTN_3, ID_BTN_SUB},
+                {ID_BTN_CLR, ID_BTN_0, ID_BTN_EQ, ID_BTN_ADD}
+            };
 
-            hResult = CreateWindow("STATIC", "Resultado: ", WS_VISIBLE | WS_CHILD, 20, 140, 300, 20, hwnd, (HMENU)ID_RESULT, NULL, NULL);
-            break;
+            int startX = 20, startY = 70;
+            int btnW = 50, btnH = 40;
+            int padding = 10;
 
-        case WM_COMMAND:
-            if (wParam >= ID_ADD && wParam <= ID_DIV) {
-                char buffer1[100], buffer2[100];
-                GetWindowText(hEdit1, buffer1, 100);
-                GetWindowText(hEdit2, buffer2, 100);
-                float num1 = atof(buffer1);
-                float num2 = atof(buffer2);
-                char resultado[100];
-
-                switch (wParam) {
-                    case ID_ADD:
-                        sprintf(resultado, "Resultado: %.2f + %.2f = %.2f", num1, num2, num1 + num2);
-                        break;
-                    case ID_SUB:
-                        sprintf(resultado, "Resultado: %.2f - %.2f = %.2f", num1, num2, num1 - num2);
-                        break;
-                    case ID_MUL:
-                        sprintf(resultado, "Resultado: %.2f * %.2f = %.2f", num1, num2, num1 * num2);
-                        break;
-                    case ID_DIV:
-                        if (num2 == 0)
-                            sprintf(resultado, "Erro: divisão por zero!");
-                        else
-                            sprintf(resultado, "Resultado: %.2f / %.2f = %.2f", num1, num2, num1 / num2);
-                        break;
+            for (int row = 0; row < 4; row++) {
+                for (int col = 0; col < 4; col++) {
+                    CreateWindow("BUTTON", botoes[row][col], WS_VISIBLE | WS_CHILD | BS_CENTER,
+                                 startX + col * (btnW + padding), startY + row * (btnH + padding),
+                                 btnW, btnH,
+                                 hwnd, (HMENU)idMap[row][col], NULL, NULL);
                 }
-
-                SetWindowText(hResult, resultado);
             }
             break;
+        }
+
+        case WM_COMMAND: {
+            int id = LOWORD(wParam);
+
+            if (id >= ID_BTN_0 && id <= ID_BTN_9) {
+                if (resultadoMostrado) {
+                    // Limpar tudo se um resultado estava sendo mostrado
+                    operando[0][0] = operando[1][0] = '\0';
+                    operador = 0;
+                    fase = 0;
+                    resultadoMostrado = 0;
+                }
+
+                int digit = id - ID_BTN_0;
+                char *atual = operando[fase];
+                int len = strlen(atual);
+                if (len < 99) {
+                    atual[len] = '0' + digit;
+                    atual[len + 1] = '\0';
+                    SetWindowText(hDisplay, atual);
+                }
+            } else if (id == ID_BTN_ADD || id == ID_BTN_SUB || id == ID_BTN_MUL || id == ID_BTN_DIV) {
+                if (strlen(operando[0]) == 0) break;
+                operador = (id == ID_BTN_ADD) ? '+' :
+                           (id == ID_BTN_SUB) ? '-' :
+                           (id == ID_BTN_MUL) ? '*' : '/';
+                fase = 1;
+                SetWindowText(hDisplay, "");
+                resultadoMostrado = 0;
+            } else if (id == ID_BTN_EQ) {
+                if (strlen(operando[0]) && strlen(operando[1]) && operador) {
+                    float n1 = atof(operando[0]);
+                    float n2 = atof(operando[1]);
+                    char resultado[100];
+
+                    if (operador == '/' && n2 == 0) {
+                        strcpy(resultado, "Erro: divisao por zero!");
+                    } else {
+                        float r = 0;
+                        if (operador == '+') r = n1 + n2;
+                        else if (operador == '-') r = n1 - n2;
+                        else if (operador == '*') r = n1 * n2;
+                        else if (operador == '/') r = n1 / n2;
+                        sprintf(resultado, "%.2f", r);
+                    }
+
+                    SetWindowText(hDisplay, resultado);
+                    strcpy(operando[0], resultado);
+                    operando[1][0] = '\0';
+                    fase = 0;
+                    operador = 0;
+                    resultadoMostrado = 1;
+                }
+            } else if (id == ID_BTN_CLR) {
+                operando[0][0] = operando[1][0] = '\0';
+                operador = 0;
+                fase = 0;
+                resultadoMostrado = 0;
+                SetWindowText(hDisplay, "");
+            }
+            break;
+        }
 
         case WM_DESTROY:
             PostQuitMessage(0);
@@ -68,7 +131,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 }
 
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-    const char CLASS_NAME[] = "CalculadoraC";
+    const char CLASS_NAME[] = "CalculadoraAjustada";
 
     WNDCLASS wc = {0};
     wc.lpfnWndProc = WindowProc;
@@ -79,11 +142,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     RegisterClass(&wc);
 
     HWND hwnd = CreateWindowEx(
-        0,
-        CLASS_NAME,
-        "Calculadora C - GUI",
-        WS_OVERLAPPEDWINDOW,
-        CW_USEDEFAULT, CW_USEDEFAULT, 350, 250,
+        0, CLASS_NAME, "Calculadora", WS_OVERLAPPEDWINDOW & ~WS_MAXIMIZEBOX & ~WS_THICKFRAME,
+        CW_USEDEFAULT, CW_USEDEFAULT, 300, 330,
         NULL, NULL, hInstance, NULL
     );
 
